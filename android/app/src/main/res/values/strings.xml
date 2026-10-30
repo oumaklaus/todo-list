@@ -1,0 +1,55 @@
+<resources>
+    <string name="app_name">TaskFlow</string>
+    <string name="app_tagline">Plan clearly. Finish calmly.</string>
+    <plurals name="open_task_count">
+        <item quantity="one">%1$d open task</item>
+        <item quantity="other">%1$d open tasks</item>
+    </plurals>
+
+    <string name="search_tasks">Search tasks</string>
+    <string name="filter_all">All</string>
+    <string name="filter_today">Today</string>
+    <string name="filter_upcoming">Upcoming</string>
+    <string name="filter_completed">Done</string>
+
+    <string name="new_task">New task</string>
+    <string name="edit_task">Edit task</string>
+    <string name="task_title">Task title</string>
+    <string name="task_notes">Notes (optional)</string>
+    <string name="task_category">Category (optional)</string>
+    <string name="task_priority">Priority</string>
+    <string name="task_due_date">Due date (optional)</string>
+    <string name="clear_date">Clear date</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="delete">Delete</string>
+
+    <string name="priority_low">Low</string>
+    <string name="priority_medium">Medium</string>
+    <string name="priority_high">High</string>
+    <string name="due_date_format">Due %1$s</string>
+
+    <string name="empty_title">A clear day starts here</string>
+    <string name="empty_subtitle">Add a task and give your day some direction.</string>
+    <string name="no_matches_title">Nothing matches</string>
+    <string name="no_matches_subtitle">Try another search or filter.</string>
+    <string name="error_title">Could not load your tasks</string>
+    <string name="error_subtitle">Check the backend connection, then try again.</string>
+    <string name="retry">Retry</string>
+    <string name="error_refresh">Could not refresh. Your current tasks are still here.</string>
+    <string name="error_save">Could not save that change. Check the connection.</string>
+
+    <string name="error_title_required">Enter a task title</string>
+    <string name="error_title_too_long">Title must be 120 characters or fewer</string>
+    <string name="error_notes_too_long">Notes must be 1000 characters or fewer</string>
+    <string name="error_category_too_long">Category must be 40 characters or fewer</string>
+    <string name="error_due_date_invalid">Choose a valid due date</string>
+
+    <string name="delete_task">Delete task?</string>
+    <string name="delete_task_message">Remove “%1$s” permanently?</string>
+    <string name="mark_complete">Mark %1$s complete</string>
+    <string name="mark_incomplete">Mark %1$s incomplete</string>
+    <string name="edit_task_description">Edit %1$s</string>
+    <string name="delete_task_description">Delete %1$s</string>
+    <string name="add_task_description">Add a task</string>
+</resources>

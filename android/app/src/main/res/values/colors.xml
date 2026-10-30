@@ -1,0 +1,22 @@
+<resources>
+    <color name="navy">#17213B</color>
+    <color name="navy_light">#263457</color>
+    <color name="accent">#6677FF</color>
+    <color name="accent_container">#E6E9FF</color>
+    <color name="surface">#F7F8FC</color>
+    <color name="surface_card">#FFFFFF</color>
+    <color name="surface_border">#E6E8F0</color>
+    <color name="text_primary">#1B1D28</color>
+    <color name="text_secondary">#666B7A</color>
+    <color name="header_subtitle">#C6CCE0</color>
+    <color name="search_background">#253150</color>
+    <color name="search_stroke">#4C5878</color>
+    <color name="white">#FFFFFF</color>
+    <color name="priority_low_background">#DDF5ED</color>
+    <color name="priority_low_text">#146B50</color>
+    <color name="priority_medium_background">#FFF0C9</color>
+    <color name="priority_medium_text">#865A00</color>
+    <color name="priority_high_background">#FFE1DF</color>
+    <color name="priority_high_text">#B3261E</color>
+    <color name="launcher_background">#17213B</color>
+</resources>
