@@ -10,6 +10,7 @@ AZURE_SKU="${AZURE_SKU:-F1}"
 AZURE_RUNTIME="${AZURE_RUNTIME:-JAVA:21-java21}"
 MONGODB_URI="${MONGODB_URI:-}"
 MONGODB_DB="${MONGODB_DB:-taskflow}"
+JWT_SECRET="${JWT_SECRET:-}"
 JAR="$ROOT_DIR/backend/build/libs/taskflow-backend-all.jar"
 
 fail() {
@@ -20,6 +21,9 @@ fail() {
 [ -n "$AZURE_RESOURCE_GROUP" ] || fail "Set AZURE_RESOURCE_GROUP for TaskFlow."
 [ -n "$AZURE_APP_NAME" ] || fail "Set AZURE_APP_NAME to a globally unique TaskFlow app name."
 [ -n "$MONGODB_URI" ] || fail "Set MONGODB_URI to TaskFlow's Cosmos DB for MongoDB or Atlas URI."
+[ -n "$JWT_SECRET" ] || fail "Set JWT_SECRET to a random secret with at least 32 bytes."
+[ "$(printf '%s' "$JWT_SECRET" | wc -c | tr -d ' ')" -ge 32 ] \
+    || fail "Set JWT_SECRET to a random secret with at least 32 bytes."
 command -v az >/dev/null 2>&1 || fail "Install Azure CLI, then run 'az login'."
 az account show >/dev/null 2>&1 || fail "Run 'az login' before deploying."
 
@@ -49,7 +53,7 @@ fi
 az webapp config appsettings set \
     --resource-group "$AZURE_RESOURCE_GROUP" \
     --name "$AZURE_APP_NAME" \
-    --settings "MONGODB_URI=$MONGODB_URI" "MONGODB_DB=$MONGODB_DB" \
+    --settings "MONGODB_URI=$MONGODB_URI" "MONGODB_DB=$MONGODB_DB" "JWT_SECRET=$JWT_SECRET" \
     --output none
 az webapp deploy \
     --resource-group "$AZURE_RESOURCE_GROUP" \
@@ -62,11 +66,11 @@ az webapp deploy \
 
 APP_URL="https://$(az webapp show --resource-group "$AZURE_RESOURCE_GROUP" --name "$AZURE_APP_NAME" --query defaultHostName --output tsv)"
 for _ in $(seq 1 60); do
-    if curl -fsS --max-time 5 "$APP_URL/tasks" >/dev/null 2>&1; then
+    if curl -fsS --max-time 5 "$APP_URL/health" >/dev/null 2>&1; then
         printf 'TaskFlow deployed: %s\n' "$APP_URL"
         printf 'Install the cloud app with: ./run.sh cloud %s\n' "$APP_URL"
         exit 0
     fi
     sleep 5
 done
-fail "Azure deployed the JAR, but $APP_URL/tasks did not become ready. Check Azure App Service logs."
+fail "Azure deployed the JAR, but $APP_URL/health did not become ready. Check Azure App Service logs."

@@ -5,6 +5,8 @@ Ktor/MongoDB backend.
 
 ## Features
 
+- Create an account and log in with email and password.
+- Keep every user's tasks private and isolated from other accounts.
 - Add, edit, complete, reopen, and delete tasks.
 - Optional notes, due date, priority, and category.
 - All, Today, Upcoming, and Done filters.
@@ -31,9 +33,9 @@ Connect an Android phone with USB debugging enabled, then run:
 ./run.sh
 ```
 
-This starts the API on port 8081, configures `adb reverse`, builds the APK,
-installs it, and launches TaskFlow. Docker is only an optional local MongoDB
-fallback.
+This starts the API on port 8081, creates a persistent local JWT signing secret
+under `.run/`, configures `adb reverse`, builds the APK, installs it, and
+launches TaskFlow. Docker is only an optional local MongoDB fallback.
 
 ```bash
 ./run.sh backend
@@ -60,8 +62,12 @@ export AZURE_LOCATION="eastus"
 export AZURE_SKU="F1"
 read -rsp "MongoDB URI: " MONGODB_URI && export MONGODB_URI && printf '\n'
 export MONGODB_DB="taskflow"
+read -rsp "JWT secret: " JWT_SECRET && export JWT_SECRET && printf '\n'
 ./deploy-azure.sh
 ```
+
+Generate a deployment secret with `openssl rand -hex 32`. Keep it stable for
+the lifetime of the deployment; changing it signs out every installed app.
 
 `F1` is requested by default to minimize cost, but availability and charges
 depend on the Azure subscription and region. Override `AZURE_SKU` if required.
@@ -80,10 +86,15 @@ computer.
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/health` | Process health |
-| GET | `/tasks` | Database readiness and task list |
-| POST | `/tasks` | Create task |
-| PUT | `/tasks/{id}` | Edit or complete task |
-| DELETE | `/tasks/{id}` | Delete task |
+| POST | `/auth/register` | Create an account and receive a JWT |
+| POST | `/auth/login` | Log in and receive a JWT |
+| GET | `/tasks` | List the authenticated user's tasks |
+| POST | `/tasks` | Create a task for the authenticated user |
+| PUT | `/tasks/{id}` | Edit or complete an owned task |
+| DELETE | `/tasks/{id}` | Delete an owned task |
+
+Task endpoints require `Authorization: Bearer TOKEN`. Passwords are stored as
+BCrypt hashes, and tokens expire after 30 days.
 
 ## Build and tests
 
@@ -93,12 +104,12 @@ cd android
 ./gradlew testDebugUnitTest assembleDebug lintDebug
 ```
 
-Verified coverage: 19 backend tests, 26 Android unit tests, 3 emulator UI tests,
-plus full emulator CRUD and MongoDB restart persistence.
+The project includes backend route/repository tests, Android unit tests, and
+Espresso login/task-screen tests.
 
 APK: `android/app/build/outputs/apk/debug/app-debug.apk`
 
 ## Limitations
 
-This is a single-user application without login. Do not store sensitive
-information. Play Store publishing is not configured.
+Password reset and email verification are not implemented. Play Store
+publishing is not configured.

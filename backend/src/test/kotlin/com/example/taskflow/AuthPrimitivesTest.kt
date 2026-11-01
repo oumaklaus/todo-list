@@ -8,8 +8,16 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertTrue
+import kotlin.test.assertFailsWith
 
 class AuthPrimitivesTest {
+    @Test
+    fun `jwt signing secret must contain at least 32 bytes`() {
+        assertFailsWith<IllegalArgumentException> {
+            JwtTokenService(secret = "too-short")
+        }
+    }
+
     @Test
     fun `bcrypt hashes verify the right password without storing plaintext`() {
         val hasher = BcryptPasswordHasher()
@@ -24,7 +32,7 @@ class AuthPrimitivesTest {
     @Test
     fun `issued token contains the authenticated user claims`() {
         val service = JwtTokenService(
-            secret = "test-secret-that-is-long-enough",
+            secret = "test-secret-that-is-long-enough-32",
             validityMillis = 60_000
         )
         val user = UserRecord(

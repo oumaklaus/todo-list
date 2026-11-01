@@ -140,7 +140,7 @@ class AuthRoutesTest {
     @Test
     fun `task endpoints reject expired bearer tokens`() = testApplication {
         val expiredTokens = com.example.taskflow.auth.JwtTokenService(
-            secret = "test-secret-that-is-long-enough",
+            secret = "test-secret-that-is-long-enough-32",
             validityMillis = -1_000
         )
         application { module(tasks, users, expiredTokens, testHasher) }

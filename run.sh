@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-RUN_DIR="$ROOT_DIR/.run"
+RUN_DIR="${TASKFLOW_RUN_DIR:-$ROOT_DIR/.run}"
 PID_FILE="$RUN_DIR/backend.pid"
 LOG_FILE="$RUN_DIR/backend.log"
 BACKEND_BIN="$ROOT_DIR/backend/build/install/taskflow-backend/bin/taskflow-backend"
@@ -21,6 +21,34 @@ log() {
 fail() {
     printf 'Error: %s\n' "$*" >&2
     exit 1
+}
+
+ensure_jwt_secret() {
+    if [ -n "${JWT_SECRET:-}" ]; then
+        local secret_bytes
+        secret_bytes="$(printf '%s' "$JWT_SECRET" | wc -c | tr -d ' ')"
+        [ "$secret_bytes" -ge 32 ] \
+            || fail "JWT_SECRET must contain at least 32 bytes."
+        export JWT_SECRET
+        return 0
+    fi
+
+    local secret_file="$RUN_DIR/jwt-secret"
+    if [ ! -s "$secret_file" ]; then
+        log "Creating a local TaskFlow JWT signing secret..."
+        umask 077
+        if command -v openssl >/dev/null 2>&1; then
+            openssl rand -hex 32 > "$secret_file"
+        else
+            od -An -N32 -tx1 /dev/urandom | tr -d ' \n' > "$secret_file"
+            printf '\n' >> "$secret_file"
+        fi
+    fi
+    chmod 600 "$secret_file"
+    JWT_SECRET="$(cat "$secret_file")"
+    [ "$(printf '%s' "$JWT_SECRET" | wc -c | tr -d ' ')" -ge 32 ] \
+        || fail "The stored JWT secret is invalid. Delete $secret_file and try again."
+    export JWT_SECRET
 }
 
 process_cmdline() {
@@ -127,6 +155,7 @@ start_mongo() {
 }
 
 start_backend() {
+    ensure_jwt_secret
     stop_backend
     log "Building the TaskFlow backend..."
     (cd "$ROOT_DIR" && ./gradlew :backend:installDist --console=plain)
@@ -141,11 +170,13 @@ start_backend() {
                 PORT="$PORT" \
                 MONGODB_URI="$MONGODB_URI" \
                 MONGODB_DB="$MONGODB_DB" \
+                JWT_SECRET="$JWT_SECRET" \
                 "$BACKEND_BIN" >>"$LOG_FILE" 2>&1 < /dev/null &
         else
             PORT="$PORT" \
             MONGODB_URI="$MONGODB_URI" \
             MONGODB_DB="$MONGODB_DB" \
+            JWT_SECRET="$JWT_SECRET" \
             nohup "$BACKEND_BIN" >>"$LOG_FILE" 2>&1 &
         fi
         echo $! > "$PID_FILE"
@@ -155,7 +186,7 @@ start_backend() {
     backend_pid="$(cat "$PID_FILE")"
     local _
     for _ in $(seq 1 60); do
-        if curl -sf -m 3 "http://localhost:$PORT/tasks" >/dev/null 2>&1; then
+        if curl -sf -m 3 "http://localhost:$PORT/health" >/dev/null 2>&1; then
             log "TaskFlow API is ready."
             return 0
         fi
@@ -260,9 +291,13 @@ case "${1:-all}" in
         start_backend
         ;;
     app)
-        curl -sf -m 3 "http://localhost:$PORT/tasks" >/dev/null \
+        curl -sf -m 3 "http://localhost:$PORT/health" >/dev/null \
             || fail "Local TaskFlow API is not running. Use ./run.sh first."
         start_app
+        ;;
+    ensure-secret)
+        ensure_jwt_secret
+        log "TaskFlow JWT signing secret is ready in $RUN_DIR."
         ;;
     cloud)
         cloud_url="${2:-${API_BASE_URL:-}}"
@@ -274,7 +309,7 @@ case "${1:-all}" in
         log "TaskFlow backend stopped. MongoDB was left running."
         ;;
     *)
-        log "Usage: ./run.sh [all|backend|app|cloud URL|stop]"
+        log "Usage: ./run.sh [all|backend|app|cloud URL|stop|ensure-secret]"
         exit 1
         ;;
 esac

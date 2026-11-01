@@ -8,7 +8,7 @@ import com.example.taskflow.model.UserRecord
 import com.example.taskflow.repository.TaskRepository
 import com.example.taskflow.repository.UserRepository
 
-internal val testJwt = JwtTokenService("test-secret-that-is-long-enough")
+internal val testJwt = JwtTokenService("test-secret-that-is-long-enough-32")
 internal val testHasher = BcryptPasswordHasher(logRounds = 4)
 internal val primaryUser = UserRecord(
     id = "user-1",

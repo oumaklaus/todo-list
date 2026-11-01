@@ -12,6 +12,12 @@ class JwtTokenService(
     private val audience: String = "taskflow-android",
     private val validityMillis: Long = 30L * 24 * 60 * 60 * 1_000
 ) {
+    init {
+        require(secret.toByteArray(Charsets.UTF_8).size >= 32) {
+            "JWT signing secret must contain at least 32 bytes"
+        }
+    }
+
     private val algorithm = Algorithm.HMAC256(secret)
 
     fun issue(user: UserRecord): String {
