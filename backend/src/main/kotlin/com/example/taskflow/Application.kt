@@ -1,15 +1,24 @@
 package com.example.taskflow
 
+import com.example.taskflow.auth.BcryptPasswordHasher
+import com.example.taskflow.auth.JwtTokenService
 import com.example.taskflow.model.ErrorResponse
 import com.example.taskflow.model.HealthResponse
 import com.example.taskflow.repository.MongoTaskRepository
+import com.example.taskflow.repository.MongoUserRepository
 import com.example.taskflow.repository.TaskRepository
+import com.example.taskflow.repository.UserRepository
+import com.example.taskflow.auth.PasswordHasher
+import com.example.taskflow.routes.authRoutes
 import com.example.taskflow.routes.taskRoutes
 import com.mongodb.client.MongoClients
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.kotlinx.json.json
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
+import io.ktor.server.auth.Authentication
+import io.ktor.server.auth.authenticate
+import io.ktor.server.auth.jwt.jwt
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import io.ktor.server.plugins.BadRequestException
@@ -29,20 +38,28 @@ fun main() {
         ?: 8080
     val mongoUri = System.getenv("MONGODB_URI") ?: "mongodb://localhost:27017"
     val databaseName = System.getenv("MONGODB_DB") ?: "taskflow"
+    val jwtSecret = System.getenv("JWT_SECRET")
+        ?: error("JWT_SECRET must be set")
 
     val mongoClient = MongoClients.create(mongoUri)
-    val repository = MongoTaskRepository(
-        mongoClient.getDatabase(databaseName).getCollection("tasks")
-    )
+    val database = mongoClient.getDatabase(databaseName)
+    val taskRepository = MongoTaskRepository(database.getCollection("tasks"))
+    val userRepository = MongoUserRepository(database.getCollection("users"))
+    val tokenService = JwtTokenService(jwtSecret)
 
     Runtime.getRuntime().addShutdownHook(Thread { mongoClient.close() })
 
     embeddedServer(Netty, port = port, host = "0.0.0.0") {
-        module(repository)
+        module(taskRepository, userRepository, tokenService)
     }.start(wait = true)
 }
 
-fun Application.module(repository: TaskRepository) {
+fun Application.module(
+    taskRepository: TaskRepository,
+    userRepository: UserRepository,
+    tokenService: JwtTokenService,
+    passwordHasher: PasswordHasher = BcryptPasswordHasher()
+) {
     install(ContentNegotiation) {
         json(Json {
             ignoreUnknownKeys = true
@@ -52,6 +69,20 @@ fun Application.module(repository: TaskRepository) {
 
     install(CallLogging) {
         level = Level.INFO
+    }
+
+    install(Authentication) {
+        jwt("auth-jwt") {
+            verifier(tokenService.verifier())
+            validate { credential ->
+                credential.payload.subject
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let { io.ktor.server.auth.jwt.JWTPrincipal(credential.payload) }
+            }
+            challenge { _, _ ->
+                call.respond(HttpStatusCode.Unauthorized, ErrorResponse("Authentication required"))
+            }
+        }
     }
 
     install(StatusPages) {
@@ -74,6 +105,9 @@ fun Application.module(repository: TaskRepository) {
         get("/health") {
             call.respond(HealthResponse("ok"))
         }
-        taskRoutes(repository)
+        authRoutes(userRepository, passwordHasher, tokenService)
+        authenticate("auth-jwt") {
+            taskRoutes(taskRepository)
+        }
     }
 }

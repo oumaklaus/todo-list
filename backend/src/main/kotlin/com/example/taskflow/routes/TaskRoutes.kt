@@ -4,6 +4,8 @@ import com.example.taskflow.model.ErrorResponse
 import com.example.taskflow.model.TaskInput
 import com.example.taskflow.repository.TaskRepository
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.auth.principal
+import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -16,7 +18,7 @@ import io.ktor.server.routing.route
 fun Route.taskRoutes(repository: TaskRepository) {
     route("/tasks") {
         get {
-            call.respond(repository.findAll())
+            call.respond(repository.findAll(call.ownerId()))
         }
 
         post {
@@ -27,7 +29,7 @@ fun Route.taskRoutes(repository: TaskRepository) {
                 return@post
             }
 
-            call.respond(HttpStatusCode.Created, repository.create(input))
+            call.respond(HttpStatusCode.Created, repository.create(call.ownerId(), input))
         }
 
         put("/{id}") {
@@ -44,7 +46,7 @@ fun Route.taskRoutes(repository: TaskRepository) {
                 return@put
             }
 
-            val updated = repository.update(id, input)
+            val updated = repository.update(call.ownerId(), id, input)
             if (updated == null) {
                 call.respond(HttpStatusCode.NotFound, ErrorResponse("Task not found"))
             } else {
@@ -59,7 +61,7 @@ fun Route.taskRoutes(repository: TaskRepository) {
                 return@delete
             }
 
-            if (repository.delete(id)) {
+            if (repository.delete(call.ownerId(), id)) {
                 call.respond(HttpStatusCode.NoContent)
             } else {
                 call.respond(HttpStatusCode.NotFound, ErrorResponse("Task not found"))
@@ -67,6 +69,9 @@ fun Route.taskRoutes(repository: TaskRepository) {
         }
     }
 }
+
+private fun io.ktor.server.application.ApplicationCall.ownerId(): String =
+    requireNotNull(principal<JWTPrincipal>()?.payload?.subject)
 
 private fun TaskInput.normalized(): TaskInput = copy(
     title = title.trim(),

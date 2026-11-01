@@ -41,6 +41,7 @@ class MongoTaskRepositoryTest {
     @Test
     fun `create and find all preserve task fields`() = runBlocking {
         val created = repository.create(
+            "user-1",
             TaskInput(
                 title = "Submit report",
                 notes = "Add references",
@@ -50,7 +51,7 @@ class MongoTaskRepositoryTest {
             )
         )
 
-        val stored = repository.findAll().single()
+        val stored = repository.findAll("user-1").single()
 
         assertEquals(created, stored)
         assertEquals("Submit report", stored.title)
@@ -60,22 +61,23 @@ class MongoTaskRepositoryTest {
 
     @Test
     fun `find all orders active dated tasks before undated and completed tasks`() = runBlocking {
-        repository.create(TaskInput(title = "Undated"))
-        repository.create(TaskInput(title = "Later", dueAt = 3000))
-        repository.create(TaskInput(title = "Soon", dueAt = 2000))
-        val done = repository.create(TaskInput(title = "Done", dueAt = 1000))
-        repository.update(done.id, TaskInput(title = "Done", dueAt = 1000, completed = true))
+        repository.create("user-1", TaskInput(title = "Undated"))
+        repository.create("user-1", TaskInput(title = "Later", dueAt = 3000))
+        repository.create("user-1", TaskInput(title = "Soon", dueAt = 2000))
+        val done = repository.create("user-1", TaskInput(title = "Done", dueAt = 1000))
+        repository.update("user-1", done.id, TaskInput(title = "Done", dueAt = 1000, completed = true))
 
-        val titles = repository.findAll().map { it.title }
+        val titles = repository.findAll("user-1").map { it.title }
 
         assertEquals(listOf("Soon", "Later", "Undated", "Done"), titles)
     }
 
     @Test
     fun `update changes editable fields and preserves identity timestamps`() = runBlocking {
-        val created = repository.create(TaskInput(title = "Draft"))
+        val created = repository.create("user-1", TaskInput(title = "Draft"))
 
         val updated = repository.update(
+            "user-1",
             created.id,
             TaskInput(
                 title = "Final",
@@ -97,22 +99,33 @@ class MongoTaskRepositoryTest {
 
     @Test
     fun `invalid and missing ids return absent results`() = runBlocking {
-        assertNull(repository.update("not-an-object-id", TaskInput(title = "Task")))
+        assertNull(repository.update("user-1", "not-an-object-id", TaskInput(title = "Task")))
         assertNull(
             repository.update(
+                "user-1",
                 "64b7f9a2c2a4e4a1b2c3d4e5",
                 TaskInput(title = "Task")
             )
         )
-        assertFalse(repository.delete("not-an-object-id"))
-        assertFalse(repository.delete("64b7f9a2c2a4e4a1b2c3d4e5"))
+        assertFalse(repository.delete("user-1", "not-an-object-id"))
+        assertFalse(repository.delete("user-1", "64b7f9a2c2a4e4a1b2c3d4e5"))
     }
 
     @Test
     fun `delete removes the task`() = runBlocking {
-        val created = repository.create(TaskInput(title = "Remove me"))
+        val created = repository.create("user-1", TaskInput(title = "Remove me"))
 
-        assertTrue(repository.delete(created.id))
-        assertEquals(emptyList(), repository.findAll())
+        assertTrue(repository.delete("user-1", created.id))
+        assertEquals(emptyList(), repository.findAll("user-1"))
+    }
+
+    @Test
+    fun `task ids cannot cross user boundaries`() = runBlocking {
+        val otherUsersTask = repository.create("user-2", TaskInput(title = "Private"))
+
+        assertEquals(emptyList(), repository.findAll("user-1"))
+        assertNull(repository.update("user-1", otherUsersTask.id, TaskInput(title = "Stolen")))
+        assertFalse(repository.delete("user-1", otherUsersTask.id))
+        assertEquals("Private", repository.findAll("user-2").single().title)
     }
 }

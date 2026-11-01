@@ -14,8 +14,8 @@ class MongoTaskRepository(
     private val collection: MongoCollection<Document>
 ) : TaskRepository {
 
-    override suspend fun findAll(): List<Task> = withContext(Dispatchers.IO) {
-        collection.find()
+    override suspend fun findAll(ownerId: String): List<Task> = withContext(Dispatchers.IO) {
+        collection.find(Filters.eq("ownerId", ownerId))
             .map { it.toTask() }
             .toList()
             .sortedWith(
@@ -25,9 +25,10 @@ class MongoTaskRepository(
             )
     }
 
-    override suspend fun create(input: TaskInput): Task = withContext(Dispatchers.IO) {
+    override suspend fun create(ownerId: String, input: TaskInput): Task = withContext(Dispatchers.IO) {
         val now = System.currentTimeMillis()
         val document = Document("_id", ObjectId())
+            .append("ownerId", ownerId)
             .append("title", input.title)
             .append("notes", input.notes)
             .append("dueAt", input.dueAt)
@@ -41,7 +42,7 @@ class MongoTaskRepository(
         document.toTask()
     }
 
-    override suspend fun update(id: String, input: TaskInput): Task? =
+    override suspend fun update(ownerId: String, id: String, input: TaskInput): Task? =
         withContext(Dispatchers.IO) {
             val objectId = id.toObjectId() ?: return@withContext null
             val values = Document("title", input.title)
@@ -52,18 +53,27 @@ class MongoTaskRepository(
                 .append("completed", input.completed)
                 .append("updatedAt", System.currentTimeMillis())
 
-            val result = collection.updateOne(
+            val ownerTask = Filters.and(
                 Filters.eq("_id", objectId),
+                Filters.eq("ownerId", ownerId)
+            )
+            val result = collection.updateOne(
+                ownerTask,
                 Document("\$set", values)
             )
             if (result.matchedCount == 0L) return@withContext null
 
-            collection.find(Filters.eq("_id", objectId)).first()?.toTask()
+            collection.find(ownerTask).first()?.toTask()
         }
 
-    override suspend fun delete(id: String): Boolean = withContext(Dispatchers.IO) {
+    override suspend fun delete(ownerId: String, id: String): Boolean = withContext(Dispatchers.IO) {
         val objectId = id.toObjectId() ?: return@withContext false
-        collection.deleteOne(Filters.eq("_id", objectId)).deletedCount > 0
+        collection.deleteOne(
+            Filters.and(
+                Filters.eq("_id", objectId),
+                Filters.eq("ownerId", ownerId)
+            )
+        ).deletedCount > 0
     }
 }
 

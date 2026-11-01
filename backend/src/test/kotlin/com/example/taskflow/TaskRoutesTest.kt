@@ -6,12 +6,14 @@ import com.example.taskflow.model.TaskInput
 import com.example.taskflow.repository.TaskRepository
 import io.ktor.client.request.delete
 import io.ktor.client.request.get
+import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.put
 import io.ktor.client.request.setBody
 import io.ktor.client.statement.bodyAsText
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.HttpHeaders
 import io.ktor.http.contentType
 import io.ktor.server.testing.testApplication
 import kotlinx.serialization.json.Json
@@ -24,15 +26,18 @@ import kotlin.test.assertTrue
 class TaskRoutesTest {
     private val json = Json { ignoreUnknownKeys = true }
     private val repository = InMemoryTaskRepository()
+    private val users = InMemoryUserRepository()
+    private val token = testJwt.issue(primaryUser)
 
     @BeforeTest
     fun setUp() {
         repository.clear()
+        users.clear()
     }
 
     @Test
     fun `health endpoint reports ok`() = testApplication {
-        application { module(repository) }
+        application { module(repository, users, testJwt, testHasher) }
 
         val response = client.get("/health")
 
@@ -42,9 +47,9 @@ class TaskRoutesTest {
 
     @Test
     fun `get tasks returns empty list initially`() = testApplication {
-        application { module(repository) }
+        application { module(repository, users, testJwt, testHasher) }
 
-        val response = client.get("/tasks")
+        val response = client.get("/tasks") { authenticated() }
 
         assertEquals(HttpStatusCode.OK, response.status)
         assertEquals(emptyList(), json.decodeFromString<List<Task>>(response.bodyAsText()))
@@ -52,9 +57,10 @@ class TaskRoutesTest {
 
     @Test
     fun `post task creates task with optional details`() = testApplication {
-        application { module(repository) }
+        application { module(repository, users, testJwt, testHasher) }
 
         val response = client.post("/tasks") {
+            authenticated()
             contentType(ContentType.Application.Json)
             setBody(
                 """{"title":"Submit report","notes":"Add references","dueAt":1800000000000,"priority":"HIGH","category":"School"}"""
@@ -76,9 +82,10 @@ class TaskRoutesTest {
 
     @Test
     fun `post task applies defaults and trims text`() = testApplication {
-        application { module(repository) }
+        application { module(repository, users, testJwt, testHasher) }
 
         val response = client.post("/tasks") {
+            authenticated()
             contentType(ContentType.Application.Json)
             setBody("""{"title":"  Read chapter 4  ","notes":"  pages 40-60  ","category":"  Study  "}""")
         }
@@ -95,9 +102,10 @@ class TaskRoutesTest {
 
     @Test
     fun `post task rejects blank title`() = testApplication {
-        application { module(repository) }
+        application { module(repository, users, testJwt, testHasher) }
 
         val response = client.post("/tasks") {
+            authenticated()
             contentType(ContentType.Application.Json)
             setBody("""{"title":"   "}""")
         }
@@ -107,10 +115,11 @@ class TaskRoutesTest {
 
     @Test
     fun `post task rejects title over 120 characters`() = testApplication {
-        application { module(repository) }
+        application { module(repository, users, testJwt, testHasher) }
         val title = "a".repeat(121)
 
         val response = client.post("/tasks") {
+            authenticated()
             contentType(ContentType.Application.Json)
             setBody("""{"title":"$title"}""")
         }
@@ -120,10 +129,11 @@ class TaskRoutesTest {
 
     @Test
     fun `post task rejects notes over 1000 characters`() = testApplication {
-        application { module(repository) }
+        application { module(repository, users, testJwt, testHasher) }
         val notes = "a".repeat(1001)
 
         val response = client.post("/tasks") {
+            authenticated()
             contentType(ContentType.Application.Json)
             setBody("""{"title":"Task","notes":"$notes"}""")
         }
@@ -133,10 +143,11 @@ class TaskRoutesTest {
 
     @Test
     fun `post task rejects category over 40 characters`() = testApplication {
-        application { module(repository) }
+        application { module(repository, users, testJwt, testHasher) }
         val category = "a".repeat(41)
 
         val response = client.post("/tasks") {
+            authenticated()
             contentType(ContentType.Application.Json)
             setBody("""{"title":"Task","category":"$category"}""")
         }
@@ -146,9 +157,10 @@ class TaskRoutesTest {
 
     @Test
     fun `post task rejects non positive due date`() = testApplication {
-        application { module(repository) }
+        application { module(repository, users, testJwt, testHasher) }
 
         val response = client.post("/tasks") {
+            authenticated()
             contentType(ContentType.Application.Json)
             setBody("""{"title":"Task","dueAt":0}""")
         }
@@ -158,10 +170,11 @@ class TaskRoutesTest {
 
     @Test
     fun `put task updates every editable field`() = testApplication {
-        application { module(repository) }
-        val created = repository.create(TaskInput(title = "Draft essay"))
+        application { module(repository, users, testJwt, testHasher) }
+        val created = repository.create(primaryUser.id, TaskInput(title = "Draft essay"))
 
         val response = client.put("/tasks/${created.id}") {
+            authenticated()
             contentType(ContentType.Application.Json)
             setBody(
                 """{"title":"Submit essay","notes":"Final copy","dueAt":1800000000000,"priority":"HIGH","category":"School","completed":true}"""
@@ -181,9 +194,10 @@ class TaskRoutesTest {
 
     @Test
     fun `put missing task returns 404`() = testApplication {
-        application { module(repository) }
+        application { module(repository, users, testJwt, testHasher) }
 
         val response = client.put("/tasks/missing") {
+            authenticated()
             contentType(ContentType.Application.Json)
             setBody("""{"title":"Task"}""")
         }
@@ -193,82 +207,55 @@ class TaskRoutesTest {
 
     @Test
     fun `delete task removes it`() = testApplication {
-        application { module(repository) }
-        val created = repository.create(TaskInput(title = "Old task"))
+        application { module(repository, users, testJwt, testHasher) }
+        val created = repository.create(primaryUser.id, TaskInput(title = "Old task"))
 
-        val response = client.delete("/tasks/${created.id}")
+        val response = client.delete("/tasks/${created.id}") { authenticated() }
 
         assertEquals(HttpStatusCode.NoContent, response.status)
-        assertEquals(emptyList(), repository.findAll())
+        assertEquals(emptyList(), repository.findAll(primaryUser.id))
     }
 
     @Test
     fun `delete missing task returns 404`() = testApplication {
-        application { module(repository) }
+        application { module(repository, users, testJwt, testHasher) }
 
-        val response = client.delete("/tasks/missing")
+        val response = client.delete("/tasks/missing") { authenticated() }
 
         assertEquals(HttpStatusCode.NotFound, response.status)
     }
 
     @Test
+    fun `known task id cannot be changed by another user`() = testApplication {
+        application { module(repository, users, testJwt, testHasher) }
+        val otherUsersTask = repository.create("user-2", TaskInput(title = "Private"))
+
+        val update = client.put("/tasks/${otherUsersTask.id}") {
+            authenticated()
+            contentType(ContentType.Application.Json)
+            setBody("""{"title":"Stolen"}""")
+        }
+        val delete = client.delete("/tasks/${otherUsersTask.id}") { authenticated() }
+
+        assertEquals(HttpStatusCode.NotFound, update.status)
+        assertEquals(HttpStatusCode.NotFound, delete.status)
+        assertEquals("Private", repository.findAll("user-2").single().title)
+    }
+
+    @Test
     fun `malformed json returns bad request`() = testApplication {
-        application { module(repository) }
+        application { module(repository, users, testJwt, testHasher) }
 
         val response = client.post("/tasks") {
+            authenticated()
             contentType(ContentType.Application.Json)
             setBody("""{"title":"""")
         }
 
         assertEquals(HttpStatusCode.BadRequest, response.status)
     }
-}
 
-private class InMemoryTaskRepository : TaskRepository {
-    private val tasks = mutableListOf<Task>()
-    private var nextId = 1
-    private var clock = 1000L
-
-    fun clear() {
-        tasks.clear()
-        nextId = 1
-        clock = 1000L
+    private fun io.ktor.client.request.HttpRequestBuilder.authenticated() {
+        header(HttpHeaders.Authorization, "Bearer $token")
     }
-
-    override suspend fun findAll(): List<Task> = tasks.toList()
-
-    override suspend fun create(input: TaskInput): Task {
-        val now = clock++
-        val task = Task(
-            id = "id-${nextId++}",
-            title = input.title,
-            notes = input.notes,
-            dueAt = input.dueAt,
-            priority = input.priority,
-            category = input.category,
-            completed = input.completed,
-            createdAt = now,
-            updatedAt = now
-        )
-        tasks.add(task)
-        return task
-    }
-
-    override suspend fun update(id: String, input: TaskInput): Task? {
-        val index = tasks.indexOfFirst { it.id == id }
-        if (index == -1) return null
-        val updated = tasks[index].copy(
-            title = input.title,
-            notes = input.notes,
-            dueAt = input.dueAt,
-            priority = input.priority,
-            category = input.category,
-            completed = input.completed,
-            updatedAt = clock++
-        )
-        tasks[index] = updated
-        return updated
-    }
-
-    override suspend fun delete(id: String): Boolean = tasks.removeIf { it.id == id }
 }
