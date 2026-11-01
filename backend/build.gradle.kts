@@ -21,6 +21,8 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
     implementation("io.ktor:ktor-server-status-pages:$ktorVersion")
     implementation("io.ktor:ktor-server-call-logging:$ktorVersion")
+    implementation("com.auth0:java-jwt:4.4.0")
+    implementation("org.mindrot:jbcrypt:0.4")
     implementation("ch.qos.logback:logback-classic:1.5.12")
     implementation("org.mongodb:mongodb-driver-sync:4.11.1")
 
