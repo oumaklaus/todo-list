@@ -53,7 +53,9 @@ fun Route.authRoutes(
             val request = call.receive<LoginRequest>().normalized()
             val user = users.findByEmail(request.email)
             val hashToCheck = user?.passwordHash ?: dummyHash
-            val validPassword = passwordHasher.verify(request.password, hashToCheck)
+            val validLength = request.password.isValidPasswordLength()
+            val passwordToCheck = if (validLength) request.password else "invalid-login-password"
+            val validPassword = passwordHasher.verify(passwordToCheck, hashToCheck) && validLength
             if (user == null || !validPassword) {
                 call.respond(
                     HttpStatusCode.Unauthorized,
@@ -85,3 +87,6 @@ private fun RegisterRequest.validationError(): String? = when {
         "Password must be 72 characters or fewer"
     else -> null
 }
+
+private fun String.isValidPasswordLength(): Boolean =
+    length in 8..72 && toByteArray(Charsets.UTF_8).size <= 72

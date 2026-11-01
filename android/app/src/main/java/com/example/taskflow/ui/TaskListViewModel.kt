@@ -4,7 +4,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.taskflow.data.RemoteTaskRepository
+import com.example.taskflow.AppContainer
 import com.example.taskflow.data.Task
 import com.example.taskflow.data.TaskDraft
 import com.example.taskflow.data.TaskRepository
@@ -39,7 +39,7 @@ class TaskListViewModel(
 ) : ViewModel() {
 
     constructor() : this(
-        repository = RemoteTaskRepository(),
+        repository = AppContainer.taskRepository,
         endOfTodayProvider = ::endOfTodayMillis
     )
 

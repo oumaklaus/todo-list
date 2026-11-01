@@ -5,6 +5,25 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TEMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TEMP_DIR"' EXIT
 
+ADB_LOG="$TEMP_DIR/adb.log"
+cat > "$TEMP_DIR/fake-adb" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$*" >> "$ADB_LOG"
+EOF
+chmod +x "$TEMP_DIR/fake-adb"
+export ADB_LOG
+(
+    export TASKFLOW_SOURCE_ONLY=1
+    # shellcheck source=/dev/null
+    source "$ROOT_DIR/run.sh"
+    launch_taskflow "$TEMP_DIR/fake-adb" emulator-5554
+)
+grep -q -- '-s emulator-5554 shell am start -n com.example.taskflow/.LoginActivity' "$ADB_LOG" || {
+    echo "runner did not launch the exported login activity" >&2
+    cat "$ADB_LOG" >&2
+    exit 1
+}
+
 TASKFLOW_RUN_DIR="$TEMP_DIR/run" "$ROOT_DIR/run.sh" ensure-secret >/dev/null
 SECRET_FILE="$TEMP_DIR/run/jwt-secret"
 [ -f "$SECRET_FILE" ] || { echo "missing generated JWT secret" >&2; exit 1; }

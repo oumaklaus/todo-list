@@ -276,9 +276,19 @@ start_app() {
     log "Installing TaskFlow on $device..."
     "$adb" -s "$device" install -r "$APK"
     log "Launching TaskFlow..."
-    "$adb" -s "$device" shell am start -n com.example.taskflow/.MainActivity >/dev/null
+    launch_taskflow "$adb" "$device"
     log "TaskFlow is open on $device."
 }
+
+launch_taskflow() {
+    local adb="$1"
+    local device="$2"
+    "$adb" -s "$device" shell am start -n com.example.taskflow/.LoginActivity >/dev/null
+}
+
+if [ "${TASKFLOW_SOURCE_ONLY:-0}" = "1" ]; then
+    return 0 2>/dev/null || exit 0
+fi
 
 case "${1:-all}" in
     all|start)

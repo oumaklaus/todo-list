@@ -106,6 +106,33 @@ class AuthRoutesTest {
     }
 
     @Test
+    fun `login rejects suffixes beyond the bcrypt byte limit`() = testApplication {
+        application { module(tasks, users, testJwt, testHasher) }
+        val asciiBoundary = "a".repeat(72)
+        val multibyteBoundary = "é".repeat(36)
+        runBlocking {
+            users.create("Ascii", "ascii@example.com", testHasher.hash(asciiBoundary))
+            users.create("Unicode", "unicode@example.com", testHasher.hash(multibyteBoundary))
+        }
+
+        suspend fun login(email: String, password: String) = client.post("/auth/login") {
+            contentType(ContentType.Application.Json)
+            setBody("""{"email":"$email","password":"$password"}""")
+        }
+
+        assertEquals(HttpStatusCode.OK, login("ascii@example.com", asciiBoundary).status)
+        assertEquals(
+            HttpStatusCode.Unauthorized,
+            login("ascii@example.com", asciiBoundary + "WRONG").status
+        )
+        assertEquals(HttpStatusCode.OK, login("unicode@example.com", multibyteBoundary).status)
+        assertEquals(
+            HttpStatusCode.Unauthorized,
+            login("unicode@example.com", multibyteBoundary + "x").status
+        )
+    }
+
+    @Test
     fun `registration validates display name email and password`() = testApplication {
         application { module(tasks, users, testJwt, testHasher) }
 

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.test.core.app.ActivityScenario
 import androidx.test.core.app.ApplicationProvider
 import androidx.test.espresso.Espresso.onView
+import androidx.test.espresso.Espresso.openActionBarOverflowOrOptionsMenu
 import androidx.test.espresso.action.ViewActions.click
 import androidx.test.espresso.assertion.ViewAssertions.matches
 import androidx.test.espresso.matcher.RootMatchers.isPlatformPopup
@@ -11,6 +12,9 @@ import androidx.test.espresso.matcher.ViewMatchers.isDisplayed
 import androidx.test.espresso.matcher.ViewMatchers.withId
 import androidx.test.espresso.matcher.ViewMatchers.withText
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.example.taskflow.data.Task
+import com.example.taskflow.data.TaskDraft
+import com.example.taskflow.data.TaskRepository
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -28,6 +32,7 @@ class MainActivityTest {
             .putString("display_name", "Test User")
             .putString("email", "test@example.com")
             .commit()
+        AppContainer.taskRepository = FakeInstrumentationTaskRepository()
     }
 
     @Test
@@ -60,4 +65,46 @@ class MainActivityTest {
                 .check(matches(isDisplayed()))
         }
     }
+
+    @Test
+    fun savedSessionEnteringLoginOpensTaskList() {
+        ActivityScenario.launch(LoginActivity::class.java).use {
+            onView(withText("TaskFlow")).check(matches(isDisplayed()))
+            onView(withId(R.id.fabAdd)).check(matches(isDisplayed()))
+        }
+    }
+
+    @Test
+    fun logoutReturnsToLogin() {
+        ActivityScenario.launch(MainActivity::class.java).use {
+            openActionBarOverflowOrOptionsMenu(ApplicationProvider.getApplicationContext())
+            onView(withText("Log out")).perform(click())
+
+            onView(withText("Welcome back")).check(matches(isDisplayed()))
+        }
+    }
+
+    @Test
+    fun unauthorizedTaskLoadClearsSessionAndReturnsToLogin() {
+        AppContainer.taskRepository = FakeInstrumentationTaskRepository(onGet = {
+            AppContainer.sessionStore.clear()
+            Result.failure(IllegalStateException("unauthorized"))
+        })
+
+        ActivityScenario.launch(MainActivity::class.java).use {
+            onView(withText("Welcome back")).check(matches(isDisplayed()))
+        }
+    }
+}
+
+private class FakeInstrumentationTaskRepository(
+    private val onGet: () -> Result<List<Task>> = { Result.success(emptyList()) }
+) : TaskRepository {
+    override suspend fun getTasks(): Result<List<Task>> = onGet()
+    override suspend fun addTask(draft: TaskDraft): Result<Task> =
+        Result.failure(UnsupportedOperationException())
+    override suspend fun updateTask(task: Task): Result<Task> =
+        Result.failure(UnsupportedOperationException())
+    override suspend fun deleteTask(id: String): Result<Unit> =
+        Result.failure(UnsupportedOperationException())
 }
