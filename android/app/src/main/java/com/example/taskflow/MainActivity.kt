@@ -1,6 +1,7 @@
 package com.example.taskflow
 
 import android.app.DatePickerDialog
+import android.content.Intent
 import android.content.DialogInterface
 import android.os.Bundle
 import android.widget.ArrayAdapter
@@ -38,6 +39,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (AppContainer.sessionStore.token.isNullOrBlank()) {
+            openLogin()
+            return
+        }
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -57,12 +62,26 @@ class MainActivity : AppCompatActivity() {
         }
         binding.fabAdd.setOnClickListener { showTaskDialog(null) }
         binding.buttonRetry.setOnClickListener { viewModel.loadTasks() }
+        binding.toolbar.inflateMenu(R.menu.main)
+        binding.toolbar.setOnMenuItemClickListener { item ->
+            if (item.itemId == R.id.actionLogout) {
+                AppContainer.sessionStore.clear()
+                openLogin()
+                true
+            } else {
+                false
+            }
+        }
 
         observeViewModel()
     }
 
     private fun observeViewModel() {
         viewModel.uiState.observe(this) { state ->
+            if (state.loadError && AppContainer.sessionStore.token.isNullOrBlank()) {
+                openLogin()
+                return@observe
+            }
             adapter.submitList(state.visibleTasks)
 
             binding.progressBar.isVisible = state.isLoading && state.tasks.isEmpty()
@@ -90,6 +109,10 @@ class MainActivity : AppCompatActivity() {
 
         viewModel.message.observe(this) { message ->
             if (message == null) return@observe
+            if (AppContainer.sessionStore.token.isNullOrBlank()) {
+                openLogin()
+                return@observe
+            }
             val text = when (message) {
                 UiMessage.REFRESH_FAILED -> R.string.error_refresh
                 UiMessage.SAVE_FAILED -> R.string.error_save
@@ -97,6 +120,22 @@ class MainActivity : AppCompatActivity() {
             Snackbar.make(binding.root, text, Snackbar.LENGTH_LONG).show()
             viewModel.messageShown()
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::binding.isInitialized && AppContainer.sessionStore.token.isNullOrBlank()) {
+            openLogin()
+        }
+    }
+
+    private fun openLogin() {
+        startActivity(
+            Intent(this, LoginActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            }
+        )
+        finish()
     }
 
     private fun showTaskDialog(task: Task?) {

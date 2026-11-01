@@ -1,6 +1,23 @@
 <resources>
     <string name="app_name">TaskFlow</string>
     <string name="app_tagline">Plan clearly. Finish calmly.</string>
+    <string name="login_title">Welcome back</string>
+    <string name="login_subtitle">Log in to keep your tasks in sync.</string>
+    <string name="create_account_title">Create your account</string>
+    <string name="create_account_subtitle">Start a private task list that belongs to you.</string>
+    <string name="display_name">Display name</string>
+    <string name="email_address">Email address</string>
+    <string name="password">Password</string>
+    <string name="log_in">Log in</string>
+    <string name="create_account">Create account</string>
+    <string name="new_account_sign_up">New to TaskFlow? Create account</string>
+    <string name="have_account_log_in">Already have an account? Log in</string>
+    <string name="log_out">Log out</string>
+    <string name="error_display_name_required">Enter your display name</string>
+    <string name="error_display_name_too_long">Display name must be 60 characters or fewer</string>
+    <string name="error_email_invalid">Enter a valid email address</string>
+    <string name="error_password_too_short">Password must be at least 8 characters</string>
+    <string name="error_password_too_long">Password must be 72 characters or fewer</string>
     <plurals name="open_task_count">
         <item quantity="one">%1$d open task</item>
         <item quantity="other">%1$d open tasks</item>
