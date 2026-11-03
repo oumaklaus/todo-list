@@ -27,8 +27,7 @@
                 android:layout_height="48dp"
                 android:layout_gravity="center"
                 android:contentDescription="@null"
-                android:src="@drawable/ic_task"
-                app:tint="@color/white" />
+                android:src="@drawable/ic_brand_mark" />
         </com.google.android.material.card.MaterialCardView>
 
         <TextView

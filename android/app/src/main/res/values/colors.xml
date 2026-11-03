@@ -19,4 +19,5 @@
     <color name="priority_high_background">#FFE1DF</color>
     <color name="priority_high_text">#B3261E</color>
     <color name="launcher_background">#17213B</color>
+    <color name="brand_sun">#FF8A65</color>
 </resources>

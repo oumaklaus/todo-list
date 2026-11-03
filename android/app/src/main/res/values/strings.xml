@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">TaskFlow</string>
+    <string name="app_name">DaySpark</string>
     <string name="app_tagline">Plan clearly. Finish calmly.</string>
     <string name="login_title">Welcome back</string>
     <string name="login_subtitle">Log in to keep your tasks in sync.</string>
@@ -10,7 +10,7 @@
     <string name="password">Password</string>
     <string name="log_in">Log in</string>
     <string name="create_account">Create account</string>
-    <string name="new_account_sign_up">New to TaskFlow? Create account</string>
+    <string name="new_account_sign_up">New to DaySpark? Create account</string>
     <string name="have_account_log_in">Already have an account? Log in</string>
     <string name="log_out">Log out</string>
     <string name="error_display_name_required">Enter your display name</string>
