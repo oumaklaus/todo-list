@@ -28,9 +28,6 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:1.5.12")
     implementation("org.mongodb:mongodb-driver-sync:4.11.1")
 
-    testImplementation("io.ktor:ktor-server-test-host:$ktorVersion")
-    testImplementation("org.jetbrains.kotlin:kotlin-test-junit:2.0.21")
-    testImplementation("de.bwaldvogel:mongo-java-server:1.47.0")
 }
 
 java {
@@ -47,10 +44,6 @@ kotlin {
 application {
     applicationName = "taskflow-backend"
     mainClass.set("com.example.taskflow.ApplicationKt")
-}
-
-tasks.test {
-    useJUnit()
 }
 
 tasks.shadowJar {

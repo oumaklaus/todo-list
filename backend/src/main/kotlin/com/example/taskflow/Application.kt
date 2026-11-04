@@ -32,14 +32,15 @@ import io.ktor.server.routing.routing
 import kotlinx.serialization.json.Json
 import org.slf4j.event.Level
 
+private const val LOCAL_JWT_SECRET = "taskflow-local-development-secret-value"
+
 fun main() {
     val port = System.getenv("PORT")?.toIntOrNull()
         ?: System.getenv("SERVER_PORT")?.toIntOrNull()
         ?: 8080
     val mongoUri = System.getenv("MONGODB_URI") ?: "mongodb://localhost:27017"
     val databaseName = System.getenv("MONGODB_DB") ?: "taskflow"
-    val jwtSecret = System.getenv("JWT_SECRET")
-        ?: error("JWT_SECRET must be set")
+    val jwtSecret = System.getenv("JWT_SECRET") ?: LOCAL_JWT_SECRET
 
     val mongoClient = MongoClients.create(mongoUri)
     val database = mongoClient.getDatabase(databaseName)

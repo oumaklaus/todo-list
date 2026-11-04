@@ -1,115 +1,79 @@
 # TaskFlow
 
-TaskFlow is an Android todo-list application with a Kotlin client and a
-Ktor/MongoDB backend.
+TaskFlow is an Android todo-list application written in Kotlin. It uses a Ktor
+backend and MongoDB to keep each account's tasks private.
 
 ## Features
 
-- Create an account and log in with email and password.
-- Keep every user's tasks private and isolated from other accounts.
-- Add, edit, complete, reopen, and delete tasks.
-- Optional notes, due date, priority, and category.
-- All, Today, Upcoming, and Done filters.
-- Search across title, notes, and category.
-- Loading, empty, retry, and connection-error states.
+- Account registration and login
+- Add, edit, complete, reopen, and delete tasks
+- Notes, due dates, priorities, and categories
+- All, Today, Upcoming, and Done filters
+- Search by title, notes, or category
 
-## Architecture
+## Project structure
 
 ```text
-Android app (Kotlin/XML) -> HTTPS/JSON -> Ktor API on Azure App Service
-                                          |
-                                          v
-                              Cosmos DB for MongoDB or MongoDB Atlas
+todo-list/
+├── android/    Android application
+├── backend/    Ktor API
+└── README.md
 ```
 
-Azure App Service hosts the executable Ktor JAR. `MONGODB_URI` can be an Azure
-Cosmos DB for MongoDB connection string or an Atlas connection string.
+## Run the Android app
 
-## Local run
+The app uses the hosted backend by default:
 
-Connect an Android phone with USB debugging enabled, then run:
-
-```bash
-./run.sh
+```text
+https://taskflow-api-2db81ce1.azurewebsites.net/
 ```
 
-This starts the API on port 8081, creates a persistent local JWT signing secret
-under `.run/`, configures `adb reverse`, builds the APK, installs it, and
-launches TaskFlow. Docker is only an optional local MongoDB fallback.
+MongoDB and the local backend do not need to be running.
 
-```bash
-./run.sh backend
-./run.sh app
-./run.sh stop
-```
+1. In IntelliJ IDEA or Android Studio, select **File > Open**.
+2. Open the `android` folder as its own project.
+3. Wait for Gradle sync and indexing to finish.
+4. Connect and unlock your phone.
+5. Enable **Developer options > USB debugging** and accept the phone's prompt.
+6. Select the `app` run configuration and your phone in the top toolbar.
+7. Click the green Run button.
 
-## Azure deployment
+If IntelliJ does not show Android options, enable the Android plugin and sync the
+project with Gradle files.
 
-The deployment script creates or reuses a Linux Azure App Service running Java
-21 and deploys `backend/build/libs/taskflow-backend-all.jar`.
+## Run the backend locally (optional)
 
-Prerequisites:
+1. Start MongoDB locally.
+2. Open the project root in IntelliJ IDEA.
+3. Open `backend/src/main/kotlin/com/example/taskflow/Application.kt`.
+4. Click the Run icon beside `fun main()`.
 
-1. Install Azure CLI and run `az login`.
-2. Create a separate Cosmos DB for MongoDB database (or Atlas database) for
-   TaskFlow and obtain its connection string.
-3. Choose globally unique Azure app and resource-group names.
+The backend defaults to `http://localhost:8080` and uses a local development JWT
+secret automatically. These environment variables can override its settings:
 
-```bash
-export AZURE_RESOURCE_GROUP="taskflow-rg"
-export AZURE_APP_NAME="UNIQUE-TASKFLOW-API-NAME"
-export AZURE_LOCATION="eastus"
-export AZURE_SKU="F1"
-read -rsp "MongoDB URI: " MONGODB_URI && export MONGODB_URI && printf '\n'
-export MONGODB_DB="taskflow"
-read -rsp "JWT secret: " JWT_SECRET && export JWT_SECRET && printf '\n'
-./deploy-azure.sh
-```
-
-Generate a deployment secret with `openssl rand -hex 32`. Keep it stable for
-the lifetime of the deployment; changing it signs out every installed app.
-
-`F1` is requested by default to minimize cost, but availability and charges
-depend on the Azure subscription and region. Override `AZURE_SKU` if required.
-
-After deployment, install the cloud-configured app:
-
-```bash
-./run.sh cloud https://UNIQUE-TASKFLOW-API-NAME.azurewebsites.net
-```
-
-The phone then connects directly to Azure and no longer needs the development
-computer.
+| Variable | Default | Purpose |
+|---|---|---|
+| `PORT` | `8080` | API port |
+| `MONGODB_URI` | `mongodb://localhost:27017` | MongoDB connection |
+| `MONGODB_DB` | `taskflow` | Database name |
+| `JWT_SECRET` | Local development value | Token-signing secret |
 
 ## API
 
 | Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health` | Process health |
-| POST | `/auth/register` | Create an account and receive a JWT |
-| POST | `/auth/login` | Log in and receive a JWT |
-| GET | `/tasks` | List the authenticated user's tasks |
-| POST | `/tasks` | Create a task for the authenticated user |
-| PUT | `/tasks/{id}` | Edit or complete an owned task |
-| DELETE | `/tasks/{id}` | Delete an owned task |
+|---|---|---|
+| GET | `/health` | Check the API status |
+| POST | `/auth/register` | Create an account |
+| POST | `/auth/login` | Log in |
+| GET | `/tasks` | List the user's tasks |
+| POST | `/tasks` | Create a task |
+| PUT | `/tasks/{id}` | Update or complete a task |
+| DELETE | `/tasks/{id}` | Delete a task |
 
-Task endpoints require `Authorization: Bearer TOKEN`. Passwords are stored as
-BCrypt hashes, and tokens expire after 30 days.
+## Presentation order
 
-## Build and tests
-
-```bash
-./gradlew :backend:test azurePackage
-cd android
-./gradlew testDebugUnitTest assembleDebug lintDebug
-```
-
-The project includes backend route/repository tests, Android unit tests, and
-Espresso login/task-screen tests.
-
-APK: `android/app/build/outputs/apk/debug/app-debug.apk`
-
-## Limitations
-
-Password reset and email verification are not implemented. Play Store
-publishing is not configured.
+1. Connect the phone and select it in the IDE.
+2. Run the `app` configuration.
+3. Register an account.
+4. Add a task with a category, priority, and due date.
+5. Edit it, complete it, filter the list, and delete it.
