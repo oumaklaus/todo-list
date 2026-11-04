@@ -14,5 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "TaskFlowAndroid"
+rootProject.name = "DaySpark"
 include(":app")

@@ -9,7 +9,7 @@ import com.example.taskflow.data.SessionStore
 import com.example.taskflow.data.SharedPreferencesSessionStore
 import com.example.taskflow.data.TaskRepository
 
-class TaskFlowApplication : Application() {
+class DaySparkApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         val sessionStore = SharedPreferencesSessionStore(this)

@@ -5,5 +5,5 @@ pluginManagement {
     }
 }
 
-rootProject.name = "taskflow"
+rootProject.name = "dayspark"
 include(":backend")

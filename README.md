@@ -1,6 +1,6 @@
-# TaskFlow
+# DaySpark
 
-TaskFlow is an Android todo-list application written in Kotlin. It uses a Ktor
+DaySpark is an Android todo-list application written in Kotlin. It uses a Ktor
 backend and MongoDB to keep each account's tasks private.
 
 ## Features
@@ -14,7 +14,7 @@ backend and MongoDB to keep each account's tasks private.
 ## Project structure
 
 ```text
-todo-list/
+project-root/
 ├── android/    Android application
 ├── backend/    Ktor API
 └── README.md
@@ -40,6 +40,10 @@ MongoDB and the local backend do not need to be running.
 
 If IntelliJ does not show Android options, enable the Android plugin and sync the
 project with Gradle files.
+
+The Android package, hosted API, and database retain their original `taskflow`
+technical identifiers so existing installations, sessions, and cloud resources
+continue working.
 
 ## Run the backend locally (optional)
 
